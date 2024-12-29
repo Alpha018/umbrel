@@ -98,7 +98,7 @@ RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
-RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg npm procps dmidecode
+RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg npm procps dmidecode cryptsetup
 
 # Install yq from binary
 # Debian repos have kislyuk/yq but we want mikefarah/yq

@@ -141,6 +141,13 @@ function build_raspberrypi_mender_artifact() {
 
 # Build the x86 artifacts.
 function build_x86_artifacts() {
+    echo "Checking for cryptsetup installation..."
+    if ! command -v cryptsetup &> /dev/null
+    then
+        echo "cryptsetup could not be found. Please ensure it is installed."
+        exit 1
+    fi
+    
     echo "Creating disk image..."
     rootfs_tar_size="$(du --block-size 1M /data/build/umbrelos-amd64.tar | awk '{print $1}')"
     rootfs_buffer="1024"
@@ -172,9 +179,16 @@ function build_x86_artifacts() {
     efi_device=$(losetup --offset $((512*efi_start)) --sizelimit $((512*efi_size)) --show --find "${disk_image}")
     root_device=$(losetup --offset $((512*root_start)) --sizelimit $((512*root_size)) --show --find "${disk_image}")
 
-    echo "Formatting partitions..."
+    echo "Formatting and encrypting partitions..."
     mkfs.vfat -n "ESP" "${efi_device}"
-    mkfs.ext4 -L "ROOTFS" "${root_device}"
+    
+    echo "Setting up LUKS on the root partition..."
+    encrypted_root="/dev/mapper/encrypted_root"
+    cryptsetup luksFormat "${root_device}"
+    cryptsetup open "${root_device}" encrypted_root
+
+    echo "Formatting encrypted partition ..."
+    mkfs.ext4 -L "ROOTFS" "${encrypted_root}"
 
     echo "Mounting partitions..."
     efi_mount_point="/mnt/efi"
@@ -182,7 +196,7 @@ function build_x86_artifacts() {
     mkdir -p "${efi_mount_point}"
     mkdir -p "${root_mount_point}"
     mount "${efi_device}" "${efi_mount_point}"
-    mount -t ext4 "${root_device}" "${root_mount_point}"
+    mount -t ext4 "${encrypted_root}" "${root_mount_point}"
 
     echo "Extracting rootfs..."
     tar -xf /data/build/umbrelos-amd64.tar --directory "${root_mount_point}"
@@ -211,6 +225,9 @@ function build_x86_artifacts() {
     echo "Detaching loopback devices..."
     losetup --detach "${efi_device}"
     losetup --detach "${root_device}"
+
+    echo "Closing LUKS partition..."
+    cryptsetup close encrypted_root
 
     echo "Disk image created!"
 

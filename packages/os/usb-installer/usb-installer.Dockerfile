@@ -5,7 +5,7 @@ RUN echo "root:root" | chpasswd
 RUN apt-get -y update
 
 # Install Linux kernel, systemd, bootloader and script deps
-RUN apt-get install --yes --no-install-recommends linux-image-amd64 systemd-sysv xz-utils dmidecode
+RUN apt-get install --yes --no-install-recommends linux-image-amd64 systemd-sysv xz-utils dmidecode cryptsetup
 
 # Reduce size
 # We have to do this extremely aggreseively because we're close to GitHub's 2GB release asset limit
